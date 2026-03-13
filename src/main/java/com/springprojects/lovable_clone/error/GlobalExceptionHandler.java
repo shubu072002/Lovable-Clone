@@ -1,0 +1,74 @@
+package com.springprojects.lovable_clone.error;
+
+import io.jsonwebtoken.JwtException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.List;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiError> handleBadRequest(BadRequestException badRequestException){
+        ApiError apiError = new ApiError(HttpStatus.BAD_REQUEST, badRequestException.getMessage());
+        log.error(apiError.toString(), badRequestException);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleResourceNotFoundException(ResourceNotFoundException resourceNotFoundException){
+        ApiError apiError = new ApiError(HttpStatus.NOT_FOUND,
+                resourceNotFoundException.getResourceName() + " with id " + resourceNotFoundException.getResourceId() + " not found");
+        log.error(apiError.toString(), resourceNotFoundException);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleInputValidationError(MethodArgumentNotValidException ex){
+
+       List<ApiFieldErrors> errors= ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> new ApiFieldErrors(error.getField(), error.getDefaultMessage()))
+                .toList();
+
+        ApiError apiError = new ApiError(HttpStatus.BAD_REQUEST, "Input validation failed", errors );
+        log.error(apiError.toString(), ex);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiError> handleJwtException(JwtException ex){
+        ApiError apiError = new ApiError(HttpStatus.UNAUTHORIZED, "Invalid JWT token: "+ ex.getMessage());
+        log.error(apiError.toString(), ex);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ApiError> handleUsernameNotFoundException(UsernameNotFoundException ex){
+        ApiError apiError = new ApiError(HttpStatus.NOT_FOUND, "Username not found with username: "+ ex.getMessage());
+        log.error(apiError.toString(), ex);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthenticationException(AuthenticationException ex){
+        ApiError apiError = new ApiError(HttpStatus.UNAUTHORIZED, "Authentication failed: "+ ex.getMessage());
+        log.error(apiError.toString(), ex);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDeniedException(AccessDeniedException ex){
+        ApiError apiError = new ApiError(HttpStatus.FORBIDDEN, "Access denied: insufficient permissions");
+        log.error(apiError.toString(), ex);
+        return ResponseEntity.status(apiError.status()).body(apiError);
+    }
+}
